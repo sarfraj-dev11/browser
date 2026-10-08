@@ -420,7 +420,7 @@ function Home() {
         { name: "Phone LookUp", url: "https://www.spokeo.com/reverse-phone-lookup", type: "url", panel: "phoneLookup", children: [] }
     ]);
     const [openBookmarkFolder, setOpenBookmarkFolder] = useState(null);
-    const [isPhonePanelOpen, setIsPhonePanelOpen] = useState(false);
+    const [isPhonePanelOpen, setIsPhonePanelOpen] = useState(true);
     const [phoneLookupInput, setPhoneLookupInput] = useState("");
     const [phoneLookupInstructions, setPhoneLookupInstructions] = useState("");
     const [phoneLookupResult, setPhoneLookupResult] = useState<{ heading: string; lines: string[] }[] | null>(null);
@@ -429,7 +429,7 @@ function Home() {
     const [phoneLookupFailed, setPhoneLookupFailed] = useState(false);
     const [phoneLookupProgress, setPhoneLookupProgress] = useState(0);
     const [phoneLookupTab, setPhoneLookupTab] = useState("overview");
-    const [isPhoneReportFullscreen, setIsPhoneReportFullscreen] = useState(false);
+    const [isPhoneReportFullscreen, setIsPhoneReportFullscreen] = useState(true);
     const [isPhoneDetailView, setIsPhoneDetailView] = useState(false);
     const [selectedPhoneProfile, setSelectedPhoneProfile] = useState<{ name: string; age: string; bestMatch: boolean; livesAt: string; livedIn: string; aka: string; relatedTo: string; includes: string; btnIndex: number } | null>(null);
     useEffect(() => {
@@ -3472,7 +3472,7 @@ Text: "${textToTranslate}"`;
                             <div className={`${full ? "text-[22px]" : "text-lg"} font-medium text-[#3d3a2e] font-sans truncate`}>
                                 {p?.name || "Report"}{p?.age ? `, Age ${p.age}` : ""}
                             </div>
-                            {subtitle && <div className="text-[12.5px] text-[#8c8877] font-sans mt-0.5 leading-relaxed">{subtitle}</div>}
+                            {subtitle && <div className="text-[12.5px] text-[#55534a] font-sans mt-0.5 leading-relaxed">{subtitle}</div>}
                         </div>
                         <div className="flex flex-col items-end gap-2.5 shrink-0">
                             <span className="px-2.5 py-1 rounded-md border border-[#d5d0bf] text-[11px] font-medium text-[#55534a] font-sans flex items-center gap-1">
@@ -3558,7 +3558,7 @@ Text: "${textToTranslate}"`;
                                                     <span className="text-white/85">{group[0]}</span>
                                                     {group.slice(1).map((sub, k) => {
                                                         const isStatus = /^(best phone|best email|active|inactive|landline|wireless|voip|mobile)\b/i.test(sub.trim());
-                                                        return <span key={k} className={isStatus ? "text-[11px] text-emerald-400 font-medium" : "text-[11.5px] text-white/40"}>{sub}</span>;
+                                                        return <span key={k} className={isStatus ? "text-[12px] text-emerald-400 font-medium" : "text-[12.5px] text-white/70"}>{sub}</span>;
                                                     })}
                                                 </div>
                                             </div>
@@ -7074,7 +7074,7 @@ Text: "${textToTranslate}"`;
             // Perplexity Direct Login Card in the Bottom Right Corner
             /*#__PURE__*/ (0, React.createElement)(PerplexityLoginCard, {
                 key: "k2970_6_23",
-                isOpen: isPerplexityModalOpen,
+                isOpen: isPerplexityModalOpen && !isPhoneReportFullscreen,
                 onClose: () => setIsPerplexityModalOpen(false),
                 isAssistantOpen: isAssistantOpen,
                 assistantWidth: assistantWidth
@@ -7090,10 +7090,33 @@ Text: "${textToTranslate}"`;
                         key: "plfs-header",
                         className: "h-14 px-5 flex items-center justify-between border-b border-[#e3e0d5] shrink-0",
                         children: [
-                                    /*#__PURE__*/ (0, React.createElement)("span", {
+                                    /*#__PURE__*/ (0, React.createElement)("div", {
                                 key: "plfs-title",
-                                className: "text-xs font-bold uppercase tracking-wider text-[#8c8877] select-none",
-                                children: "Phone LookUp Report"
+                                className: "flex items-center gap-2.5 select-none shrink-0",
+                                children: [
+                                    /*#__PURE__*/ (0, React.createElement)("img", {
+                                        key: "plfs-logo",
+                                        src: "/logo/logo.png",
+                                        alt: "Brocus",
+                                        className: "h-8 w-8 rounded-lg object-contain"
+                                    }),
+                                    /*#__PURE__*/ (0, React.createElement)("div", {
+                                        key: "plfs-brand",
+                                        className: "flex flex-col",
+                                        children: [
+                                            /*#__PURE__*/ (0, React.createElement)("span", {
+                                                key: "plfs-brand-name",
+                                                className: "text-sm font-bold text-[#3d3a2e] leading-tight",
+                                                children: "Brocus Lookup Engine"
+                                            }),
+                                            /*#__PURE__*/ (0, React.createElement)("span", {
+                                                key: "plfs-brand-sub",
+                                                className: "text-[10px] font-semibold uppercase tracking-wider text-[#8c8877] leading-tight",
+                                                children: "Phone Lookup Report"
+                                            })
+                                        ]
+                                    })
+                                ]
                             }),
                                     /*#__PURE__*/ (0, React.createElement)("form", {
                                 key: "plfs-searchbar",

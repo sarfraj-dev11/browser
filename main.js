@@ -213,7 +213,9 @@ function createWindow() {
             nodeIntegration: true,
             contextIsolation: false,
             webviewTag: true,
-            preload: path.join(__dirname, "preload.js")
+            preload: app.isPackaged
+                ? path.join(process.resourcesPath, "preload.js")
+                : path.join(__dirname, "preload.js")
         }
     });
 
