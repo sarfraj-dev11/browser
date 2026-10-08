@@ -1,0 +1,17 @@
+node_modules
+.next
+release
+data
+scratch
+snapshots
+docs
+.gemini
+*.tsbuildinfo
+.env.local
+gemini_key.json
+openrouter_key.json
+groq_key.json
+perplexity_key.json
+main.js
+preload.js
+scripts
