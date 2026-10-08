@@ -179,13 +179,17 @@ function setupAutoUpdater() {
 }
 
 function getAppIcon() {
-    const iconIco = path.join(__dirname, "public", "icon.ico");
-    const iconPng = path.join(__dirname, "public", "icon.png");
-    const iconHand = path.join(__dirname, "public", "hand-logo.png");
-
-    if (fs.existsSync(iconIco)) return iconIco;
-    if (fs.existsSync(iconPng)) return iconPng;
-    if (fs.existsSync(iconHand)) return iconHand;
+    const dirs = [path.join(__dirname, "public")];
+    try {
+        if (app.isPackaged) dirs.unshift(path.join(process.resourcesPath, "standalone", "public"));
+    } catch (e) {}
+    const names = ["brocus-icon.png", "icon.ico", "icon.png", "hand-logo.png"];
+    for (const dir of dirs) {
+        for (const name of names) {
+            const p = path.join(dir, name);
+            if (fs.existsSync(p)) return p;
+        }
+    }
     return undefined;
 }
 
@@ -399,9 +403,12 @@ app.whenReady().then(async () => {
 
     setupDownloadManager();
 
-    // Credential-save channel for popup windows without a preload (via console-message)
+    // Pre-load saved creds from credentials.json so autofill works on first visit
+    seedVaultFromCredentialsFile();
+
+    // Credential-save channel for windows and webviews (via console-message)
     app.on("web-contents-created", (e, wc) => {
-        if (wc.getType() !== "window") return;
+        if (wc.getType() !== "window" && wc.getType() !== "webview") return;
         wc.on("console-message", (ev, level, message) => {
             try {
                 if (typeof message === "string" && message.startsWith("__VAULT_SAVE__")) {
@@ -456,26 +463,64 @@ app.whenReady().then(async () => {
                     if (window.__credAutofilled) return;
                     const USER = ${JSON.stringify(match.username)}, PASS = ${JSON.stringify(match.password)};
                     const set = (el, v) => {
-                        el.focus();
-                        el.value = v;
-                        el.dispatchEvent(new Event('input', { bubbles: true }));
-                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                        try {
+                            el.focus();
+                            const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+                            Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, v);
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                            // React-controlled forms: call the framework handlers directly so
+                            // component state (and things like a disabled submit) actually update.
+                            const k = Object.keys(el).find(k => k.startsWith('__reactProps$'));
+                            if (k) {
+                                const ev = { target: el, currentTarget: el, persist() {}, preventDefault() {} };
+                                try { el[k].onChange && el[k].onChange(ev); } catch (e) {}
+                                try { el[k].onBlur && el[k].onBlur(ev); } catch (e) {}
+                            }
+                        } catch (e) {}
+                    };
+                    const findSubmit = (scope) => {
+                        let btn = scope.querySelector('button[type="submit"], input[type="submit"], #passwordNext button, #passwordNext')
+                            || document.querySelector('button[type="submit"], #passwordNext button, #passwordNext');
+                        if (!btn) {
+                            btn = Array.from(scope.querySelectorAll('button, [role="button"], a')).find(el => {
+                                const t = (el.textContent || '').trim().toLowerCase();
+                                return /^(log ?in|sign ?in|continue|submit)$/.test(t) && el.offsetParent !== null;
+                            }) || null;
+                        }
+                        return btn;
                     };
                     let tries = 0;
                     const iv = setInterval(() => {
+                        tries++;
                         const pw = document.querySelector('input[type="password"]:not([disabled])');
-                        if (pw && !pw.value) {
+                        if (pw && !window.__credAutofilled) {
                             window.__credAutofilled = true;
                             set(pw, PASS);
                             const scope = pw.closest('form') || document;
-                            const userInp = scope.querySelector('input[type="email"], input[name="identifier"], input[autocomplete="username"], input[name*="user" i], input[name*="login" i], input[name*="email" i], input[type="text"]:not([type="hidden"])')
+                            const userInp = scope.querySelector('input[type="email"], input[name="identifier"], input[autocomplete="username"], input[name="email"], input[name*="user" i], input[name*="login" i], input[name*="email" i], input[type="text"]:not([type="hidden"])')
                                 || document.querySelector('input[type="email"], input[autocomplete="username"]');
                             if (userInp && !userInp.value) set(userInp, USER);
-                            const btn = scope.querySelector('button[type="submit"], input[type="submit"], #passwordNext button, #passwordNext')
-                                || document.querySelector('button[type="submit"], #passwordNext button, #passwordNext');
-                            if (btn) setTimeout(() => btn.click(), 400);
+                            // Give React a beat to re-render (submit buttons often start disabled),
+                            // then click; retry once in case it was still disabled.
+                            setTimeout(() => {
+                                const b = findSubmit(pw.closest('form') || document);
+                                if (b && !b.disabled) b.click();
+                                else setTimeout(() => { const b2 = findSubmit(document); if (b2 && !b2.disabled) b2.click(); }, 900);
+                            }, 700);
                             clearInterval(iv);
-                        } else if (++tries > 60) clearInterval(iv);
+                        } else if (!pw && !window.__credNavClicked && tries >= 8) {
+                            // Creds exist for this host but no login form — looks logged out.
+                            // Click a visible Login/Sign-in element (link, button, or span) so the form appears.
+                            const leaf = Array.from(document.querySelectorAll('a, button, span, li, [role="button"]')).find(el => {
+                                const t = (el.textContent || '').trim().toLowerCase();
+                                return /^(log ?in|sign ?in)$/.test(t) && el.offsetParent !== null;
+                            });
+                            if (leaf) {
+                                window.__credNavClicked = true;
+                                (leaf.closest('a, button, [role="button"]') || leaf).click();
+                            }
+                        } else if (tries > 60) clearInterval(iv);
                     }, 400);
                 })();
             `).catch(() => {});
@@ -510,7 +555,7 @@ app.whenReady().then(async () => {
         wc.on("did-navigate", autofill);
         wc.on("did-navigate-in-page", autofill); // SPA transitions (e.g. Google email -> password step)
         wc.on("dom-ready", autofill);
-        if (wc.getType() === "window") wc.on("dom-ready", () => injectCredCapture(wc));
+        wc.on("dom-ready", () => injectCredCapture(wc));
     });
 
     // Auto-sync cookies from the selected Chrome profile on startup
@@ -537,7 +582,7 @@ app.whenReady().then(async () => {
         if (!serverOk) {
             dialog.showErrorBox(
                 "Startup Error",
-                `Claude Browser couldn't start its internal server.\n\nLog: ${path.join(app.getPath("userData"), "startup.log")}`
+                `Brocus Lookup Engine couldn't start its internal server.\n\nLog: ${path.join(app.getPath("userData"), "startup.log")}`
             );
         }
     }
@@ -1294,6 +1339,45 @@ ipcMain.on("vault-save-credential", (event, data) => {
         saveVaultCredential(getActiveProfileFolder(), data.host, data.username || "", String(data.password || ""));
     } catch (e) {}
 });
+
+// Resolve the preload path for <webview> tags — in packaged builds it lives
+// in resources/ (copied via extraResources), not on the developer's disk.
+ipcMain.handle("get-preload-url", () => {
+    const p = app.isPackaged
+        ? path.join(process.resourcesPath, "preload.js")
+        : path.join(app.getAppPath(), "preload.js");
+    return require("url").pathToFileURL(p).toString();
+});
+
+// Seed the vault from a credentials.json file. Lookup order:
+//   userData/credentials.json  -> per-install, never shipped (safest)
+//   resources/credentials.json -> bundled in the exe (opt-in via extraResources)
+//   <appPath>/credentials.json -> dev mode
+// Format: [{ "host": "example.com", "username": "me@x.com", "password": "..." }]
+function seedVaultFromCredentialsFile() {
+    try {
+        if (!safeStorage.isEncryptionAvailable()) return;
+        const candidates = [
+            path.join(app.getPath("userData"), "credentials.json"),
+            path.join(process.resourcesPath || "", "credentials.json"),
+            path.join(app.getAppPath(), "credentials.json"),
+        ];
+        const file = candidates.find(p => p && fs.existsSync(p));
+        if (!file) return;
+        const seeds = JSON.parse(fs.readFileSync(file, "utf8"));
+        const folder = getActiveProfileFolder();
+        let n = 0;
+        for (const s of Array.isArray(seeds) ? seeds : []) {
+            if (s && s.host && s.password) {
+                saveVaultCredential(folder, String(s.host), String(s.username || ""), String(s.password));
+                n++;
+            }
+        }
+        if (n) console.log(`[vault] seeded ${n} credential(s) from ${file}`);
+    } catch (e) {
+        console.error("[vault] seed failed:", e.message);
+    }
+}
 
 function getChromeCredentials(folderName) {
     const folder = folderName && folderName !== "default" ? folderName : "Default";

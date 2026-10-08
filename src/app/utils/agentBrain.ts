@@ -498,7 +498,7 @@ Respond ONLY with a valid JSON block containing your next step thought and actio
       }
 
       if (!responseText.trim()) {
-        onFinish(renderLog() + `\n\n❌ **Error**: Empty response returned from Claude API.`);
+        onFinish(renderLog() + `\n\n❌ **Error**: Empty response returned from Brocus AI.`);
         return;
       }
 
@@ -543,7 +543,7 @@ Respond ONLY with a valid JSON block containing your next step thought and actio
       console.error("Agent brain decision query failed:", err);
       const isNetworkErr = err && (err.message?.includes("fetch") || err.toString().includes("fetch") || err.message?.includes("Network") || err.message?.includes("connect"));
       const errHeader = isNetworkErr
-        ? "Network connection to Claude API failed. Please check your internet connection or API key status."
+        ? "Network connection to Brocus AI failed. Please check your internet connection or API key status."
         : "Failed to parse next step JSON.";
       onFinish(renderLog() + `\n\n❌ **Error**: ${errHeader}\n\nDetails: ${err.message || err}`);
       return;

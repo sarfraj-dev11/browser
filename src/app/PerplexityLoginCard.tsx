@@ -81,7 +81,7 @@ export default function PerplexityLoginCard({
                         // Logo header
                         /*#__PURE__*/ React.createElement("img", {
                             key: "logo",
-                            src: "/claudecode-color.png",
+                            src: "/logo/brocus-logo.webp",
                             alt: "Logo",
                             className: "w-14 h-14 object-contain mb-6"
                         }),
@@ -202,7 +202,7 @@ export default function PerplexityLoginCard({
                 children: [
                     /*#__PURE__*/ React.createElement("img", {
                         key: "logo",
-                        src: "/claudecode-color.png",
+                        src: "/logo/brocus-logo.webp",
                         alt: "Logo",
                         className: "w-11 h-11 object-contain"
                     }),

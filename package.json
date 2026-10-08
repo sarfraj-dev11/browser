@@ -1,8 +1,8 @@
 {
   "name": "browser",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
-  "description": "Claude Browser",
+  "description": "Brocus Lookup Engine",
   "author": "Raj Tiwari",
   "main": "main.js",
   "scripts": {
@@ -41,7 +41,7 @@
   },
   "build": {
     "appId": "com.claude.browser",
-    "productName": "Claude Browser",
+    "productName": "Brocus Lookup Engine",
     "directories": {
       "output": "release"
     },
@@ -54,12 +54,16 @@
     "extraResources": [
       {
         "from": ".next",
-        "filter": ["standalone/**"]
-      }
+        "filter": [
+          "standalone/**"
+        ]
+      },
+      "preload.js",
+      "credentials.json"
     ],
     "win": {
       "target": "nsis",
-      "icon": "public/icon.ico"
+      "icon": "public/brocus-icon.png"
     },
     "nsis": {
       "oneClick": false,

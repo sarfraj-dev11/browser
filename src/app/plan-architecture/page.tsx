@@ -851,7 +851,7 @@ export default function PlanArchitecturePage() {
             </span>
           </div>
 
-          {/* 3 Action Pill Buttons Row (Figma, Claude Ui, Screenshots) */}
+          {/* 3 Action Pill Buttons Row (Figma, Brocus Ui, Screenshots) */}
           <div className="flex flex-wrap items-center gap-3.5 sm:gap-4">
             {/* Figma Button */}
             <button
@@ -874,19 +874,19 @@ export default function PlanArchitecturePage() {
               <span className={selectedDesignSource === "Figma" ? "font-semibold transition-transform scale-105" : ""}>Figma</span>
             </button>
 
-            {/* Claude Ui Button */}
+            {/* Brocus Ui Button */}
             <button
               type="button"
-              onClick={() => setSelectedDesignSource(selectedDesignSource === "Claude Ui" ? null : "Claude Ui")}
+              onClick={() => setSelectedDesignSource(selectedDesignSource === "Brocus Ui" ? null : "Brocus Ui")}
               className={`px-6 py-3 rounded-2xl font-['Poppins'] text-[15px] font-medium flex items-center justify-center gap-2.5 transition-all duration-200 shadow-xs cursor-pointer active:scale-95 border ${
-                selectedDesignSource === "Claude Ui"
+                selectedDesignSource === "Brocus Ui"
                   ? "bg-white text-black border-[#E3E0D5] shadow-md scale-[1.03] animate-in zoom-in-95"
                   : "bg-[#0A0A0A] hover:bg-black text-white border-transparent"
               }`}
             >
-              {/* Claude PNG Icon */}
-              <img src="/claudecode-color.png" alt="Claude UI" className="w-5 h-5 object-contain" />
-              <span className={selectedDesignSource === "Claude Ui" ? "font-semibold transition-transform scale-105" : ""}>Claude Ui</span>
+              {/* Brocus PNG Icon */}
+              <img src="/logo/brocus-logo.webp" alt="Brocus UI" className="w-5 h-5 object-contain" />
+              <span className={selectedDesignSource === "Brocus Ui" ? "font-semibold transition-transform scale-105" : ""}>Brocus Ui</span>
             </button>
 
             {/* Screenshots Button */}
@@ -942,10 +942,10 @@ export default function PlanArchitecturePage() {
             </button>
           </div>
 
-          {/* Claude Ui Theme Section */}
+          {/* Brocus Ui Theme Section */}
           <div className="space-y-3 pt-2">
             <h3 className="font-['Georgia'] text-[20px] font-normal text-[#191919] tracking-tight select-none">
-              Claude Ui theme
+              Brocus Ui theme
             </h3>
 
             {/* Theme Tags / Badges with Selection Text Animation */}
@@ -1018,7 +1018,7 @@ export default function PlanArchitecturePage() {
             </span>
           </div>
 
-          {/* 3 Action Pill Buttons Row (Google Fonts, Claude Fonts, Upload Font) */}
+          {/* 3 Action Pill Buttons Row (Google Fonts, Brocus Fonts, Upload Font) */}
           <div className="flex flex-wrap items-center gap-3.5 sm:gap-4">
             {/* Google Fonts Button */}
             <button
@@ -1040,18 +1040,18 @@ export default function PlanArchitecturePage() {
               <span className={selectedFontSource === "Google Fonts" ? "font-semibold transition-transform scale-105" : ""}>Google Fonts</span>
             </button>
 
-            {/* Claude Fonts Button */}
+            {/* Brocus Fonts Button */}
             <button
               type="button"
-              onClick={() => setSelectedFontSource(selectedFontSource === "Claude Fonts" ? null : "Claude Fonts")}
+              onClick={() => setSelectedFontSource(selectedFontSource === "Brocus Fonts" ? null : "Brocus Fonts")}
               className={`px-6 py-3 rounded-2xl font-['Poppins'] text-[15px] font-medium flex items-center justify-center gap-2.5 transition-all duration-200 shadow-xs cursor-pointer active:scale-95 border ${
-                selectedFontSource === "Claude Fonts"
+                selectedFontSource === "Brocus Fonts"
                   ? "bg-white text-black border-[#E3E0D5] shadow-md scale-[1.03] animate-in zoom-in-95"
                   : "bg-[#0A0A0A] hover:bg-black text-white border-transparent"
               }`}
             >
-              <img src="/claudecode-color.png" alt="Claude Fonts" className="w-5 h-5 object-contain" />
-              <span className={selectedFontSource === "Claude Fonts" ? "font-semibold transition-transform scale-105" : ""}>Claude Fonts</span>
+              <img src="/logo/brocus-logo.webp" alt="Brocus Fonts" className="w-5 h-5 object-contain" />
+              <span className={selectedFontSource === "Brocus Fonts" ? "font-semibold transition-transform scale-105" : ""}>Brocus Fonts</span>
             </button>
 
             {/* Upload Font Button */}

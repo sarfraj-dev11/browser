@@ -26,7 +26,7 @@ import { generateDeepArchitecturalPlan } from "./utils/deepPlanEngine";
 import { Sparkles, Search, Shield, Zap, Info, ChevronRight, Terminal, Heart, Users, Globe, Cpu, Play, Download, ExternalLink, FolderOpen, Trash2, FileText, Image, Archive, Folder, Plus, Key, Clock, Star, LayoutGrid, Puzzle, Printer, ScanSearch, Share2, Briefcase, HelpCircle, Settings, LogOut, Minus, Maximize2, User, Lock, Square, X, CheckCircle2, Pause, RefreshCw, Phone, Mail, MapPin, Scale, Landmark, GraduationCap, AtSign } from "lucide-react";
 import { AUTOCOMPLETE_DOMAINS } from "./utils/constants";
 
-import { ClaudeAvatar } from "./components/ClaudeAvatar";
+import { BrocusAvatar } from "./components/BrocusAvatar";
 import { AgentProgressCard } from "./components/AgentProgressCard";
 import { UpdateBanner } from "./components/UpdateBanner";
 import { getAiLogoPath, renderIncognitoIcon, sanitizeJsonString } from "./utils/helpers";
@@ -178,6 +178,16 @@ function Home() {
             }
         }
     };
+
+    const [webviewPreloadUrl, setWebviewPreloadUrl] = useState("");
+    useEffect(() => {
+        try {
+            if (typeof window !== "undefined" && window.require) {
+                const { ipcRenderer } = window.require("electron");
+                ipcRenderer.invoke("get-preload-url").then((u) => setWebviewPreloadUrl(u || "")).catch(() => { });
+            }
+        } catch (e) { }
+    }, []);
 
     useEffect(() => {
         try {
@@ -485,7 +495,7 @@ function Home() {
                                     setApiSuggestions(suggestions);
                                 }
                             } catch (err) {
-                                console.error("Failed to load suggestions from API:", err);
+                                console.debug("Failed to load suggestions from API:", err);
                             }
                         }
                     }["Home.useEffect.handler"]
@@ -674,7 +684,7 @@ function Home() {
                                     setApiNewTabSuggestions(suggestions);
                                 }
                             } catch (err) {
-                                console.error("Failed to load suggestions from API:", err);
+                                console.debug("Failed to load suggestions from API:", err);
                             }
                         }
                     }["Home.useEffect.handler"]
@@ -3643,7 +3653,7 @@ Text: "${textToTranslate}"`;
                                                             alt: "",
                                                             className: "w-3.5 h-3.5 object-contain rounded-sm",
                                                             onError: (e) => {
-                                                                e.target.src = "/logo/claude.png";
+                                                                e.target.src = "/logo/brocus-logo.webp";
                                                             }
                                                         })
                                                 }),
@@ -3686,7 +3696,7 @@ Text: "${textToTranslate}"`;
                                                         alt: "",
                                                         className: "w-3.5 h-3.5 object-contain shrink-0 rounded-sm",
                                                         onError: (e) => {
-                                                            e.target.src = "/logo/claude.png";
+                                                            e.target.src = "/logo/brocus-logo.webp";
                                                         }
                                                     })),
                                                             /*#__PURE__*/ (0, React.createElement)("span", {
@@ -4442,8 +4452,8 @@ Text: "${textToTranslate}"`;
                                 }`,
                             title: "Toggle Assistant",
                             children: /*#__PURE__*/ (0, React.createElement)("img", {
-                                src: "/logo/claude.png",
-                                alt: "Claude",
+                                src: "/logo/brocus-logo.webp",
+                                alt: "Brocus",
                                 className: `w-4 h-4 object-contain select-none shrink-0 transition-all ${isAssistantOpen ? "" : "grayscale opacity-85"}`
                             })
                         }),
@@ -5363,7 +5373,7 @@ Text: "${textToTranslate}"`;
                                         id={`webview-${tab.id}`}
                                         src={getWebviewSrc(tab.initialUrl || tab.url)}
                                         partition={tab.isIncognito ? `incognito-${tab.id}` : `persist:chrome-${activeProfileId || "Default"}`}
-                                        preload="file:///c:/Users/raj.tiwari/Documents/browser/preload.js"
+                                        preload={webviewPreloadUrl || "file:///c:/Users/raj.tiwari/Documents/browser/preload.js"}
                                         className="w-full h-full border-none bg-white"
                                         allowpopups="true"
                                         ref={(el) => {
@@ -5450,7 +5460,7 @@ Text: "${textToTranslate}"`;
                                             /*#__PURE__*/ (0, React.createElement)("p", {
                                         key: "sub",
                                         className: "text-[13px] text-zinc-400 font-sans leading-relaxed",
-                                        children: "On this device, Comet won't save your browsing history, cookies, or site data from this session."
+                                        children: "On this device, Brocus Lookup Engine won't save your browsing history, cookies, or site data from this session."
                                     }),
                                             /*#__PURE__*/ (0, React.createElement)("p", {
                                         key: "explanation",
@@ -5468,14 +5478,14 @@ Text: "${textToTranslate}"`;
                                         }),
                                                     /*#__PURE__*/ (0, React.createElement)("li", {
                                             key: "b2",
-                                            children: "Comet's Personal Search is disabled — it won't access your history or perform any actions for you."
+                                            children: "Brocus Lookup Engine's Personal Search is disabled — it won't access your history or perform any actions for you."
                                         })
                                         ]
                                     }),
                                             /*#__PURE__*/ (0, React.createElement)("div", {
                                         key: "wont-save-title",
                                         className: "text-[11.5px] font-bold text-zinc-300 font-sans mt-1",
-                                        children: "Comet won't save:"
+                                        children: "Brocus Lookup Engine won't save:"
                                     }),
                                             /*#__PURE__*/ (0, React.createElement)("ul", {
                                         key: "bullet-list-2",
@@ -5553,15 +5563,15 @@ Text: "${textToTranslate}"`;
                                         key: "k4284_0_162",
                                         className: "flex items-center justify-center overflow-hidden",
                                         children: /*#__PURE__*/ (0, React.createElement)("img", {
-                                            src: "/claudecode-color.png",
-                                            alt: "Claude Browser",
+                                            src: "/logo/brocus-logo.webp",
+                                            alt: "Brocus Lookup Engine",
                                             className: "w-24 h-24 object-contain"
                                         })
                                     }),
                                                 /*#__PURE__*/ (0, React.createElement)("h2", {
                                         key: "k4284_1_163",
                                         className: "text-3xl font-medium tracking-tight font-serif text-[#191919]",
-                                        children: "Claude Browser"
+                                        children: "Brocus Lookup Engine"
                                     }),
                                                 /*#__PURE__*/ (0, React.createElement)("p", {
                                         key: "k4284_2_164",
@@ -6102,7 +6112,7 @@ Text: "${textToTranslate}"`;
                         key: "k4669_0_191",
                         onMouseDown: startResizing,
                         className: "absolute left-0 top-0 w-1.5 h-full cursor-col-resize hover:bg-[#fc4b01]/35 transition-all z-50 -ml-[3px]",
-                        title: "Drag to resize Claude Assistant"
+                        title: "Drag to resize Brocus Assistant"
                     }),
                             /*#__PURE__*/ (0, React.createElement)("div", {
                         key: "k4669_1_192",
@@ -6115,7 +6125,7 @@ Text: "${textToTranslate}"`;
                                             /*#__PURE__*/ (0, React.createElement)("span", {
                                 key: "k4683_0_198",
                                 className: "text-[10px] font-bold text-[#8c8877] uppercase tracking-wider select-none",
-                                children: "Claude Assistant"
+                                children: "Brocus Assistant"
                             }),
                                             /*#__PURE__*/ (0, React.createElement)("img", {
                                 key: "k4683_1_199",
@@ -6223,14 +6233,14 @@ Text: "${textToTranslate}"`;
                                     children: [
                                                 /*#__PURE__*/ (0, React.createElement)("img", {
                                         key: "k4766_0_205",
-                                        src: "/claudecode-color.png",
-                                        alt: "Claude Logo",
+                                        src: "/logo/brocus-logo.webp",
+                                        alt: "Brocus Logo",
                                         className: "w-16 h-16 object-contain mb-4"
                                     }),
                                                 /*#__PURE__*/ (0, React.createElement)("h2", {
                                         key: "k4766_1_206",
                                         className: "text-sm font-semibold text-[#191919]",
-                                        children: "Claude Assistant"
+                                        children: "Brocus Assistant"
                                     }),
                                                 /*#__PURE__*/ (0, React.createElement)("p", {
                                         key: "k4766_2_207",
@@ -6431,7 +6441,7 @@ Text: "${textToTranslate}"`;
                                         key: "k4956_0_224",
                                         className: "flex items-center gap-3",
                                         children: [
-                                                        /*#__PURE__*/ (0, React.createElement)(ClaudeAvatar, { key: "k4959_0_226", }),
+                                                        /*#__PURE__*/ (0, React.createElement)(BrocusAvatar, { key: "k4959_0_226", }),
                                                         /*#__PURE__*/ (0, React.createElement)("div", {
                                             key: "k4959_1_227",
                                             className: "flex items-center gap-1.5 text-[#6e6b5e]",
@@ -6944,7 +6954,7 @@ Text: "${textToTranslate}"`;
                                                     alt: "",
                                                     className: "w-4 h-4 object-contain shrink-0 rounded-sm",
                                                     onError: (e) => {
-                                                        e.target.src = "/logo/claude.png";
+                                                        e.target.src = "/logo/brocus-logo.webp";
                                                     }
                                                 }),
                                                         /*#__PURE__*/ (0, React.createElement)("div", {

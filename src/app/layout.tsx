@@ -13,10 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Antigravity | Developer Control Center",
-  description: "A premium dashboard for monitoring, logging, and managing system services.",
+  title: "Brocus Lookup Engine",
+  description: "A desktop web workspace and lookup engine.",
   icons: {
-    icon: "/claudecode-color.svg",
+    icon: "/brocus-icon.png",
   }
 };
 
