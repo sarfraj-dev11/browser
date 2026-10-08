@@ -885,7 +885,7 @@ export default function PlanArchitecturePage() {
               }`}
             >
               {/* Brocus PNG Icon */}
-              <img src="/logo/brocus-logo.webp" alt="Brocus UI" className="w-5 h-5 object-contain" />
+              <img src="/logo/logo.png" alt="Brocus UI" className="w-5 h-5 object-contain" />
               <span className={selectedDesignSource === "Brocus Ui" ? "font-semibold transition-transform scale-105" : ""}>Brocus Ui</span>
             </button>
 
@@ -1050,7 +1050,7 @@ export default function PlanArchitecturePage() {
                   : "bg-[#0A0A0A] hover:bg-black text-white border-transparent"
               }`}
             >
-              <img src="/logo/brocus-logo.webp" alt="Brocus Fonts" className="w-5 h-5 object-contain" />
+              <img src="/logo/logo.png" alt="Brocus Fonts" className="w-5 h-5 object-contain" />
               <span className={selectedFontSource === "Brocus Fonts" ? "font-semibold transition-transform scale-105" : ""}>Brocus Fonts</span>
             </button>
 

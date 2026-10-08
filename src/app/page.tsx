@@ -425,6 +425,9 @@ function Home() {
     const [phoneLookupInstructions, setPhoneLookupInstructions] = useState("");
     const [phoneLookupResult, setPhoneLookupResult] = useState<{ heading: string; lines: string[] }[] | null>(null);
     const [phoneLookupProfiles, setPhoneLookupProfiles] = useState<{ name: string; age: string; bestMatch: boolean; livesAt: string; livedIn: string; aka: string; relatedTo: string; includes: string; btnIndex: number }[]>([]);
+    const [isPhoneSearching, setIsPhoneSearching] = useState(false);
+    const [phoneLookupFailed, setPhoneLookupFailed] = useState(false);
+    const [phoneLookupProgress, setPhoneLookupProgress] = useState(0);
     const [phoneLookupTab, setPhoneLookupTab] = useState("overview");
     const [isPhoneReportFullscreen, setIsPhoneReportFullscreen] = useState(false);
     const [isPhoneDetailView, setIsPhoneDetailView] = useState(false);
@@ -3242,11 +3245,20 @@ Text: "${textToTranslate}"`;
                     const poll = setInterval(() => {
                         const isResultsPage = /\\/\\d{3}-\\d{3}-\\d{4}/.test(location.pathname);
                         const hasResults = [...document.querySelectorAll('a, button')].some(b => /view\\s*details/i.test(b.textContent || ''));
+                        const bodyTxt = document.body.innerText || '';
+                        const onSearchForm = !!document.querySelector('input[placeholder*="digit" i]');
+                        const noResultsText = /(no results found|we couldn'?t find|didn'?t find any|0 results|no matches found|no records found|didn'?t return any)/i.test(bodyTxt);
                         const sectionHits = [...document.querySelectorAll('h1,h2,h3,h4,div,span')].filter(h => {
                             const ht = (h.innerText || '').trim();
                             return !h.closest('nav, aside, header, footer') && ht.length < 60 && ![...h.children].some(c => (c.innerText || '').trim().length > 0) && /^(contact( information)?|phone(&| and)?\\s*e-?mail|phone numbers?|email addresses?|location history|all addresses|family|relatives?|social(\\s*profiles?|\\s*media|\\s*networks?)?|court(s)?(\\s*records)?|criminal records?|personal(&\\s*historical records)?|personal details?|wealth|owned propert(y|ies)|work(\\s*(and|&)\\s*)?education|education|employment|overview|photos?|videos?)$/i.test(ht);
                         }).length;
-                        if (document.body.innerText.length > 4000 && !document.querySelector('input[placeholder*="digit" i]') && ![...document.querySelectorAll('button')].some(b => /search\\s*now/i.test(b.textContent || '')) && ((hasResults && isResultsPage) || sectionHits >= 2 || attempts > 20)) {
+                        if (noResultsText && !hasResults) {
+                            clearInterval(poll);
+                            resolve({ none: true });
+                        } else if (onSearchForm && !isResultsPage && attempts > 12) {
+                            clearInterval(poll);
+                            resolve({ none: true });
+                        } else if (bodyTxt.length > 4000 && !onSearchForm && ![...document.querySelectorAll('button')].some(b => /search\\s*now/i.test(b.textContent || '')) && ((hasResults && isResultsPage) || sectionHits >= 2 || attempts > 20)) {
                             clearInterval(poll);
                             extractProfiles();
                             window.__phoneLookupExtracted = true;
@@ -3308,10 +3320,13 @@ Text: "${textToTranslate}"`;
             let profilesData: any[] = [];
             const injectPoll = setInterval(async () => {
                 injectAttempts++;
+                setPhoneLookupProgress(Math.min(95, Math.round((injectAttempts / 60) * 100)));
                 webview.executeJavaScript(profileScript).then((d: any) => {
                     if (d && d.length) {
                         profilesData = d;
                         setPhoneLookupProfiles(d);
+                        setIsPhoneSearching(false);
+                        setPhoneLookupProgress(100);
                         if (formatted) {
                             const best = d.find((p: any) => p.bestMatch);
                             if (best) openPhoneLookupProfile(best);
@@ -3320,11 +3335,18 @@ Text: "${textToTranslate}"`;
                 }).catch(() => { });
                 try {
                     const data = await webview.executeJavaScript(injectScript);
-                    if (data && data.sections) {
+                    if (data && data.none) {
+                        captured = true;
+                        clearInterval(injectPoll);
+                        setIsPhoneSearching(false);
+                        if (!profilesData.length) setPhoneLookupFailed(true);
+                    } else if (data && data.sections) {
                         const isResultsUrl = /spokeo\.com\/\d{3}-\d{3}-\d{4}/.test(data.url || "");
                         if (isResultsUrl && (profilesData.length > 0 || !formatted)) return;
                         captured = true;
                         clearInterval(injectPoll);
+                        setIsPhoneSearching(false);
+                        setPhoneLookupProgress(100);
                         setPhoneLookupResult(data.sections);
                         if (data.profiles && data.profiles.length && /\/\d{3}-\d{3}-\d{4}/.test(data.url || "")) setPhoneLookupProfiles(data.profiles);
                         if (instructions) {
@@ -3336,6 +3358,8 @@ Text: "${textToTranslate}"`;
                 } catch { }
                 if (injectAttempts > 60 && !captured) {
                     clearInterval(injectPoll);
+                    setIsPhoneSearching(false);
+                    if (!profilesData.length) setPhoneLookupFailed(true);
                     if (instructions) {
                         setIsAssistantOpen(true);
                         handleSendAssistantMessage(`On the current phone lookup profile page, ${instructions}. Never ask the user questions; decide and act on your own.`);
@@ -3354,6 +3378,9 @@ Text: "${textToTranslate}"`;
         setPhoneLookupProfiles([]);
         setIsPhoneDetailView(false);
         setSelectedPhoneProfile(null);
+        setIsPhoneSearching(true);
+        setPhoneLookupFailed(false);
+        setPhoneLookupProgress(0);
         startPhoneLookupExtraction(instructions, formatted);
     };
     const openPhoneLookupProfile = async (profile: any) => {
@@ -3653,7 +3680,7 @@ Text: "${textToTranslate}"`;
                                                             alt: "",
                                                             className: "w-3.5 h-3.5 object-contain rounded-sm",
                                                             onError: (e) => {
-                                                                e.target.src = "/logo/brocus-logo.webp";
+                                                                e.target.src = "/logo/logo.png";
                                                             }
                                                         })
                                                 }),
@@ -3696,7 +3723,7 @@ Text: "${textToTranslate}"`;
                                                         alt: "",
                                                         className: "w-3.5 h-3.5 object-contain shrink-0 rounded-sm",
                                                         onError: (e) => {
-                                                            e.target.src = "/logo/brocus-logo.webp";
+                                                            e.target.src = "/logo/logo.png";
                                                         }
                                                     })),
                                                             /*#__PURE__*/ (0, React.createElement)("span", {
@@ -4452,7 +4479,7 @@ Text: "${textToTranslate}"`;
                                 }`,
                             title: "Toggle Assistant",
                             children: /*#__PURE__*/ (0, React.createElement)("img", {
-                                src: "/logo/brocus-logo.webp",
+                                src: "/logo/logo.png",
                                 alt: "Brocus",
                                 className: `w-4 h-4 object-contain select-none shrink-0 transition-all ${isAssistantOpen ? "" : "grayscale opacity-85"}`
                             })
@@ -5312,7 +5339,10 @@ Text: "${textToTranslate}"`;
                                 key: `bm-${bm.name}-${bm.url}`,
                                 onClick: () => {
                                     navigateTab(bm.url);
-                                    if (bm.panel === "phoneLookup") setIsPhonePanelOpen(true);
+                                    if (bm.panel === "phoneLookup") {
+                                        setIsPhonePanelOpen(true);
+                                        setIsPhoneReportFullscreen(true);
+                                    }
                                 },
                                 title: bm.url,
                                 className: "flex items-center gap-1.5 ml-4 px-3 py-1 rounded-full border border-[#cfcaba] hover:border-[#b3ad9c] hover:bg-black/5 text-[11px] font-medium text-[#191919] transition-colors whitespace-nowrap shrink-0",
@@ -5563,7 +5593,7 @@ Text: "${textToTranslate}"`;
                                         key: "k4284_0_162",
                                         className: "flex items-center justify-center overflow-hidden",
                                         children: /*#__PURE__*/ (0, React.createElement)("img", {
-                                            src: "/logo/brocus-logo.webp",
+                                            src: "/logo/logo.png",
                                             alt: "Brocus Lookup Engine",
                                             className: "w-24 h-24 object-contain"
                                         })
@@ -6004,6 +6034,48 @@ Text: "${textToTranslate}"`;
                                 className: "text-[10px] text-[#8c8877] font-sans leading-relaxed",
                                 children: "Leave instructions empty for a direct search, or describe a task and the assistant will do it on the site."
                             }),
+                                    isPhoneSearching && /*#__PURE__*/ (0, React.createElement)("div", {
+                                key: "plp-progress",
+                                className: "mt-1 flex flex-col gap-1.5",
+                                children: [
+                                            /*#__PURE__*/ (0, React.createElement)("div", {
+                                        key: "plp-progress-label",
+                                        className: "flex items-center justify-between",
+                                        children: [
+                                                    /*#__PURE__*/ (0, React.createElement)("span", {
+                                                key: "plp-progress-t",
+                                                className: "text-[10px] font-bold text-[#8c8877] uppercase tracking-wider select-none",
+                                                children: "Searching records"
+                                            }),
+                                                    /*#__PURE__*/ (0, React.createElement)("span", {
+                                                key: "plp-progress-pct",
+                                                className: "text-[10px] font-bold text-[#fc4b01] select-none",
+                                                children: `${phoneLookupProgress}%`
+                                            })
+                                        ]
+                                    }),
+                                            /*#__PURE__*/ (0, React.createElement)("div", {
+                                        key: "plp-progress-bar",
+                                        className: "h-1.5 w-full rounded-full bg-[#e3e0d5] overflow-hidden",
+                                        children: /*#__PURE__*/ (0, React.createElement)("div", {
+                                            className: "h-full rounded-full animate-progress-bar transition-all duration-500",
+                                            style: { width: `${Math.max(8, phoneLookupProgress)}%` }
+                                        })
+                                    })
+                                ]
+                            }),
+                                    phoneLookupFailed && !isPhoneSearching && /*#__PURE__*/ (0, React.createElement)("div", {
+                                key: "plp-noresults",
+                                className: "mt-2 rounded-xl border border-[#e3e0d5] bg-white px-3.5 py-3 flex items-center gap-2.5",
+                                children: [
+                                            /*#__PURE__*/ (0, React.createElement)(Search, { key: "plp-nr-icon", size: 15, className: "text-[#8c8877] shrink-0" }),
+                                            /*#__PURE__*/ (0, React.createElement)("span", {
+                                        key: "plp-nr-text",
+                                        className: "text-[13px] text-[#8c8877] font-sans",
+                                        children: "No profiles found for this number."
+                                    })
+                                ]
+                            }),
                                     phoneLookupResult && (isPhoneDetailView || phoneLookupProfiles.length === 0) && /*#__PURE__*/ (0, React.createElement)("div", {
                                 key: "plp-result",
                                 className: "mt-2 flex flex-col gap-3 border-t border-[#e3e0d5] pt-3",
@@ -6233,7 +6305,7 @@ Text: "${textToTranslate}"`;
                                     children: [
                                                 /*#__PURE__*/ (0, React.createElement)("img", {
                                         key: "k4766_0_205",
-                                        src: "/logo/brocus-logo.webp",
+                                        src: "/logo/logo.png",
                                         alt: "Brocus Logo",
                                         className: "w-16 h-16 object-contain mb-4"
                                     }),
@@ -6954,7 +7026,7 @@ Text: "${textToTranslate}"`;
                                                     alt: "",
                                                     className: "w-4 h-4 object-contain shrink-0 rounded-sm",
                                                     onError: (e) => {
-                                                        e.target.src = "/logo/brocus-logo.webp";
+                                                        e.target.src = "/logo/logo.png";
                                                     }
                                                 }),
                                                         /*#__PURE__*/ (0, React.createElement)("div", {
@@ -7077,6 +7149,48 @@ Text: "${textToTranslate}"`;
                         children: /*#__PURE__*/ (0, React.createElement)("div", {
                             className: "w-full flex flex-col gap-5",
                             children: [
+                                isPhoneSearching && /*#__PURE__*/ (0, React.createElement)("div", {
+                                    key: "plfs-progress",
+                                    className: "mx-4 flex flex-col gap-2",
+                                    children: [
+                                        /*#__PURE__*/ (0, React.createElement)("div", {
+                                            key: "plfs-progress-label",
+                                            className: "flex items-center justify-between",
+                                            children: [
+                                                /*#__PURE__*/ (0, React.createElement)("span", {
+                                                    key: "plfs-progress-t",
+                                                    className: "text-[11px] font-bold text-[#8c8877] uppercase tracking-wider select-none",
+                                                    children: "Searching records"
+                                                }),
+                                                /*#__PURE__*/ (0, React.createElement)("span", {
+                                                    key: "plfs-progress-pct",
+                                                    className: "text-[11px] font-bold text-[#fc4b01] select-none",
+                                                    children: `${phoneLookupProgress}%`
+                                                })
+                                            ]
+                                        }),
+                                        /*#__PURE__*/ (0, React.createElement)("div", {
+                                            key: "plfs-progress-bar",
+                                            className: "h-2 w-full rounded-full bg-[#e3e0d5] overflow-hidden",
+                                            children: /*#__PURE__*/ (0, React.createElement)("div", {
+                                                className: "h-full rounded-full animate-progress-bar transition-all duration-500",
+                                                style: { width: `${Math.max(8, phoneLookupProgress)}%` }
+                                            })
+                                        })
+                                    ]
+                                }),
+                                phoneLookupFailed && !isPhoneSearching && /*#__PURE__*/ (0, React.createElement)("div", {
+                                    key: "plfs-noresults",
+                                    className: "mx-4 rounded-2xl border border-[#e3e0d5] bg-white px-5 py-4 flex items-center gap-3",
+                                    children: [
+                                        /*#__PURE__*/ (0, React.createElement)(Search, { key: "plfs-nr-icon", size: 17, className: "text-[#8c8877] shrink-0" }),
+                                        /*#__PURE__*/ (0, React.createElement)("span", {
+                                            key: "plfs-nr-text",
+                                            className: "text-sm text-[#8c8877] font-sans",
+                                            children: "No profiles found for this number."
+                                        })
+                                    ]
+                                }),
                                 phoneLookupProfiles.length > 0 && /*#__PURE__*/ (0, React.createElement)("div", {
                                     key: "plfs-profiles",
                                     className: "flex gap-4 overflow-x-auto px-4 py-10 items-center",
