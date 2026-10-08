@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, webContents, Menu, MenuItem, clipboard, shell, safeStorage } = require("electron");
+const { app, BrowserWindow, ipcMain, session, webContents, Menu, MenuItem, clipboard, shell, safeStorage, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const http = require("http");
@@ -10,12 +10,28 @@ const activeDownloads = new Map();
 let embeddedServerProcess = null;
 let embeddedServerPort = 0;
 
+// Crash + startup diagnostics: packaged apps can't print to a console,
+// so write everything to userData/startup.log instead.
+function appLog(msg) {
+    try {
+        const line = `[${new Date().toISOString()}] ${msg}\n`;
+        fs.appendFileSync(path.join(app.getPath("userData"), "startup.log"), line);
+    } catch (e) {}
+}
+
+process.on("uncaughtException", (e) => {
+    appLog(`UNCAUGHT: ${e && e.stack || e}`);
+});
+process.on("unhandledRejection", (e) => {
+    appLog(`UNHANDLED: ${e && e.stack || e}`);
+});
 // ---- Embedded Next.js server (packaged builds only) ----
 // Dev mode keeps loading the external dev server on port 3001.
 // Packaged mode forks .next/standalone/server.js as a Node process
 // (ELECTRON_RUN_AS_NODE makes the Electron binary act as plain Node).
 
 function seedUserDataDir() {
+    appLog("seeding user data dir");
     // Writable copy of the RAG data dir lives in userData; seeded once from
     // the bundled data-seed folder so upgrades don't wipe the user's index.
     const target = path.join(app.getPath("userData"), "data");
@@ -65,13 +81,13 @@ async function startEmbeddedServer() {
     const standaloneDir = path.join(process.resourcesPath, "standalone");
     const serverJs = path.join(standaloneDir, "server.js");
     if (!fs.existsSync(serverJs)) {
-        console.error("[embedded-server] server.js missing at", serverJs);
+        appLog(`server.js missing at ${serverJs}`);
         return false;
     }
     const dataDir = seedUserDataDir();
     const port = await getFreePort();
     if (!port) {
-        console.error("[embedded-server] no free port available");
+        appLog("no free port available");
         return false;
     }
     embeddedServerPort = port;
@@ -84,18 +100,21 @@ async function startEmbeddedServer() {
             HOSTNAME: "127.0.0.1",
             BROWSER_DATA_DIR: dataDir
         },
-        stdio: ["ignore", "inherit", "inherit", "ipc"],
-        silent: false
+        stdio: ["ignore", "pipe", "pipe", "ipc"]
     });
+    if (embeddedServerProcess.stdout) embeddedServerProcess.stdout.on("data", d => appLog(`[server] ${d}`));
+    if (embeddedServerProcess.stderr) embeddedServerProcess.stderr.on("data", d => appLog(`[server-err] ${d}`));
+    embeddedServerProcess.on("error", (e) => appLog(`fork error: ${e.message}`));
     embeddedServerProcess.on("exit", (code) => {
-        console.log("[embedded-server] exited with code", code);
+        appLog(`server exited with code ${code}`);
         embeddedServerProcess = null;
     });
     try {
         await waitForServer(`http://127.0.0.1:${port}`);
+        appLog(`server ready on port ${port}`);
         return true;
     } catch (e) {
-        console.error("[embedded-server]", e.message);
+        appLog(`server failed to start: ${e.message}`);
         embeddedServerPort = 0;
         return false;
     }
@@ -512,8 +531,15 @@ app.whenReady().then(async () => {
         console.log("[profile-sync] auto-sync failed:", e.message);
     }
 
+    appLog(`whenReady — packaged: ${app.isPackaged}, resourcesPath: ${process.resourcesPath}`);
     if (app.isPackaged) {
-        await startEmbeddedServer();
+        const serverOk = await startEmbeddedServer();
+        if (!serverOk) {
+            dialog.showErrorBox(
+                "Startup Error",
+                `Claude Browser couldn't start its internal server.\n\nLog: ${path.join(app.getPath("userData"), "startup.log")}`
+            );
+        }
     }
     setupAutoUpdater();
 

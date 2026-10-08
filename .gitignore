@@ -51,3 +51,5 @@ perplexity_key.json
 /snapshots/
 /.qdrant-initialized
 /.gemini/
+
+.vercel
