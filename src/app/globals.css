@@ -1,26 +1,317 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@200;300;400;500;600&display=swap');
 @import "tailwindcss";
 
+::selection {
+  background-color: #DE7356;
+  color: #FFFFFF;
+}
+
+@font-face {
+  font-family: 'TiemposHeadline';
+  src: url('/claude-font/TestTiemposHeadline-Regular-BF66457a508e31a.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TiemposHeadline';
+  src: url('/claude-font/TestTiemposHeadline-Semibold-BF66457a509040b.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'TiemposHeadline';
+  src: url('/claude-font/TestTiemposHeadline-Bold-BF66457a5113d17.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ClaudeSans';
+  src: url('/ClaudeSansPlain.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  --color-claude-bg: #f9f8f6;
+  --color-claude-panel: #f4f3ee;
+  --color-claude-header: #e9e6dc;
+  --color-claude-border: #e3e0d5;
+  --color-claude-accent: #c15f3c;
+  --color-claude-accent-hover: #a34b2c;
+  --color-claude-text: #191919;
+  --color-claude-text-muted: #6e6b5e;
+  --font-serif: "TiemposHeadline", Georgia, Cambria, serif;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f9f8f6;
+  --foreground: #191919;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 105%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  letter-spacing: 0.03em;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar styled for Claude UI */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f4f3ee;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d5d2c4;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b1ada1;
+}
+
+/* Base custom classes */
+.claude-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(25, 25, 25, 0.03);
+}
+
+.claude-shadow-input {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+/* Force standard height inheritance on custom Chromium webviews via flex */
+webview {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+webview.hidden {
+  display: none !important;
+}
+
+/* Premium animated motion blue glow frame */
+.motion-blue-glow {
+  box-shadow: inset 0 0 30px rgba(59, 130, 246, 0.55);
+  animation: blueGlowPulse 4s ease-in-out infinite;
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  border: 2.5px solid rgba(59, 130, 246, 0.5);
+  border-radius: inherit;
+}
+
+@keyframes blueGlowPulse {
+
+  0%,
+  100% {
+    box-shadow: inset 0 0 24px rgba(59, 130, 246, 0.5), 0 0 8px rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.45);
+    background-color: rgba(59, 130, 246, 0.01);
+  }
+
+  50% {
+    box-shadow: inset 0 0 48px rgba(59, 130, 246, 0.75), 0 0 16px rgba(59, 130, 246, 0.4);
+    border-color: rgba(96, 165, 250, 0.7);
+    background-color: rgba(59, 130, 246, 0.022);
+  }
+}
+
+/* Animated visual click ripple */
+@keyframes clickRipple {
+  0% {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.click-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 48px;
+  height: 48px;
+  border: 4px solid #3b82f6;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: clickRipple 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+/* Premium light shimmer loading animation for agent thoughts */
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmerSweep 2.5s infinite linear;
+}
+
+/* YouTube-style Progress Bar Animation */
+@keyframes loadingProgress {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-progress-bar {
+  background: linear-gradient(90deg, #c15f3c 25%, #f59e0b 50%, #c15f3c 75%);
+  background-size: 200% 100%;
+  animation: loadingProgress 1.8s infinite linear;
+}
+
+/* Premium Glassmorphic Sidebars */
+.premium-glass-card {
+  background: rgba(27, 26, 24, 0.96) !important;
+  backdrop-filter: blur(12px) !important;
+  border-left: 1px solid rgba(46, 43, 36, 0.8) !important;
+}
+
+/* Dynamic Hover Effects */
+.nav-btn-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-btn-hover:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateY(-0.5px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.nav-btn-hover:active {
+  transform: scale(0.95);
+}
+
+/* Sleek Tab Scale Animation */
+.tab-active-glow {
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Container Query for Responsive Browser Tabs */
+.tab-container {
+  container-type: inline-size;
+  container-name: tab;
+  width: 100%;
+}
+
+@container tab (max-width: 75px) {
+  .tab-title-text {
+    display: none !important;
+  }
+
+  .tab-standard-close {
+    display: none !important;
+  }
+
+  .tab-compact-close-container {
+    display: flex !important;
+  }
+
+  .tab-standard-layout {
+    display: none !important;
+  }
+}
+
+@container tab (min-width: 76px) {
+  .tab-compact-close-container {
+    display: none !important;
+  }
+
+  .tab-standard-layout {
+    display: flex !important;
+  }
+}
+
+/* Bouncy Entry Animation for newly created tabs */
+@keyframes tabBounceEntry {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+
+  70% {
+    transform: translateY(-2px) scale(1.02);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-tab-bounce-entry {
+  animation: tabBounceEntry 380ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Bouncy Exit Animation for closed tabs */
+@keyframes tabBounceExit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  30% {
+    transform: translateY(-3px) scale(1.02);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.85);
+  }
+}
+
+.animate-tab-bounce-exit {
+  animation: tabBounceExit 200ms cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.custom-thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #D8D4C8;
+  border-radius: 9999px;
+}
+.custom-thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #B0A996;
 }

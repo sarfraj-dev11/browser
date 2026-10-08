@@ -1,0 +1,20 @@
+export const AUTOCOMPLETE_DOMAINS = [
+    "google.com",
+    "grok.com",
+    "github.com",
+    "youtube.com",
+    "gmail.com",
+    "wikipedia.org",
+    "reddit.com",
+    "twitter.com",
+    "x.com",
+    "facebook.com",
+    "amazon.com",
+    "netflix.com",
+    "linkedin.com",
+    "instagram.com",
+    "openai.com",
+    "claude.ai",
+    "microsoft.com",
+    "apple.com"
+];

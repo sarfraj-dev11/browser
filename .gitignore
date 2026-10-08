@@ -19,6 +19,7 @@
 
 # production
 /build
+/release/
 
 # misc
 .DS_Store
@@ -39,3 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+gemini_key.json
+openrouter_key.json
+groq_key.json
+perplexity_key.json
+
+# local runtime data (RAG index, scratch, snapshots)
+/data/
+/scratch/
+/snapshots/
+/.qdrant-initialized
+/.gemini/
