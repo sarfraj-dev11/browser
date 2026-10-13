@@ -511,15 +511,22 @@ app.whenReady().then(async () => {
                                 else setTimeout(() => { const b2 = findSubmit(document); if (b2 && !b2.disabled) b2.click(); }, 900);
                             }, 700);
                             clearInterval(iv);
-                        } else if (!pw && !window.__credNavClicked && tries >= 8) {
+                        } else if (!pw && tries >= 8 && (tries - 8) % 6 === 0 && (window.__credNavClicked || 0) < 3) {
                             // Creds exist for this host but no login form — looks logged out.
-                            // Click a visible Login/Sign-in element (link, button, or span) so the form appears.
-                            const leaf = Array.from(document.querySelectorAll('a, button, span, li, [role="button"]')).find(el => {
+                            // Click a Login/Sign-in element so the form appears. Use the innermost match
+                            // (handlers often sit on a span inside an <li>), prefer on-screen ones (narrow
+                            // layouts tuck a second copy into an off-canvas menu), and try the next
+                            // candidate if the form still hasn't appeared.
+                            const matches = Array.from(document.querySelectorAll('a, button, span, li, [role="button"]')).filter(el => {
                                 const t = (el.textContent || '').trim().toLowerCase();
                                 return /^(log ?in|sign ?in)$/.test(t) && el.offsetParent !== null;
                             });
+                            const leaves = matches.filter(el => !matches.some(o => o !== el && el.contains(o)));
+                            const onScreen = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight; };
+                            leaves.sort((a, b) => onScreen(b) - onScreen(a));
+                            const leaf = leaves[window.__credNavClicked || 0];
                             if (leaf) {
-                                window.__credNavClicked = true;
+                                window.__credNavClicked = (window.__credNavClicked || 0) + 1;
                                 (leaf.closest('a, button, [role="button"]') || leaf).click();
                             }
                         } else if (tries > 60) clearInterval(iv);

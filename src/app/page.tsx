@@ -62,12 +62,29 @@ const decodePhoneLookupLine = (t: string): string | null => {
     return t;
 };
 
+// A phone / email / street address line starts a new entry in the report.
+const isPhoneLookupEntry = (l: string) => /\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/.test(l) || /@/.test(l) || /\d+\s+[A-Za-z0-9. ]+\b(st|ave|avenue|rd|road|dr|drive|ln|lane|blvd|ct|court|way|pl|place|cir|circle|hwy|trl|ter|terrace|pkwy)\b/i.test(l);
+
+// Decode a section's raw lines. Spokeo renders each value visibly and again in a hidden
+// machine-readable form (e.g. "phone|6099032864|..."), so drop entries already seen in the section.
+const decodePhoneLookupLines = (lines: string[]) => {
+    const seen = new Set<string>();
+    return lines.map(decodePhoneLookupLine).filter((l): l is string => {
+        if (!l) return false;
+        if (!isPhoneLookupEntry(l)) return true;
+        const key = l.toLowerCase().replace(/\W/g, "");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+};
+
 const buildPhoneLookupTabs = (sections: { heading: string; lines: string[] }[] | null) => {
     if (!sections) return [] as { id: string; label: string; groups: { heading: string; lines: string[] }[] }[];
     const tabMap = new Map<string, { heading: string; lines: string[] }[]>();
     const cleaned = sections
         .filter((s) => !/data sources/i.test(s.heading))
-        .map((s) => ({ heading: s.heading, lines: s.lines.map(decodePhoneLookupLine).filter((l): l is string => !!l) }))
+        .map((s) => ({ heading: s.heading, lines: decodePhoneLookupLines(s.lines) }))
         .filter((s) => s.lines.length > 0);
     cleaned.forEach((s, i) => {
         const tab = i === 0 ? PHONE_LOOKUP_TABS[0] : (PHONE_LOOKUP_TABS.find((t) => t.match && t.match.test(s.heading)) || PHONE_LOOKUP_TABS[0]);
@@ -3170,31 +3187,30 @@ Text: "${textToTranslate}"`;
                     const SKIP_SEL = 'nav, aside, header, footer, [role="navigation"], [role="banner"], [role="contentinfo"], script, style, noscript';
                     const KNOWN_HEADING = /^(contact( information)?|phone(&| and)?\\s*e-?mail|phone numbers?|email addresses?|location history|all addresses|current address|family|relatives?|social(\\s*profiles?|\\s*media|\\s*networks?)?|court(s)?(\\s*records)?|criminal records?|personal(&\\s*historical records)?|personal details?|wealth|owned propert(y|ies)|propert(y|ies)|work(\\s*(and|&)\\s*)?education|education|employment|neighbors?|demographics?|overview|historical records|photos?|videos?)$/i;
                     const hasTextChildren = (el) => [...el.children].some(c => (c.innerText || '').trim().length > 0);
+                    // Spokeo also uses <h*> tags for values (phone numbers, emails, usernames, "RELATIVE" labels); those are data, not sections.
+                    const VALUE_LIKE = /\\d{3}\\)?[\\s.-]*\\d{3}-\\d{4}|@|^username:|^[A-Z][A-Z\\s]*$/;
                     const headingLike = (el) => {
                         if (el.closest(SKIP_SEL)) return false;
                         const t = (el.textContent || '').trim();
                         if (!t || t.length > 80) return false;
-                        if (/^H[1-6]$/.test(el.tagName)) return true;
+                        if (/^H[1-6]$/.test(el.tagName)) return !VALUE_LIKE.test(t);
                         return KNOWN_HEADING.test(t) && !hasTextChildren(el);
                     };
                     const getRoot = () => document.querySelector('main, [role="main"], #__next, body') || document.body;
                     const collected = new Map();
-                    const collectVisible = () => {
+                    // The whole report is in the DOM once loaded, so read it in one pass (no scrolling needed).
+                    const collectAll = () => {
                         const r = getRoot();
                         const docs = [r];
                         r.querySelectorAll('iframe').forEach((f) => {
                             try { if (f.contentDocument && f.contentDocument.body) docs.push(f.contentDocument.body); } catch (e) { }
                         });
-                        docs.forEach((doc, di) => {
+                        docs.forEach((doc) => {
                             let cur = null;
                             doc.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,tr,dt,dd,td,th,span,div,a,button').forEach((el) => {
                                 if (el.closest(SKIP_SEL)) return;
                                 if (headingLike(el)) { cur = (el.textContent || '').trim().replace(/\\s+/g, ' '); return; }
-                                if (di === 0) {
-                                    const rect = el.getBoundingClientRect();
-                                    if (rect.top > innerHeight + 900 || rect.bottom < -900) return;
-                                }
-                                if (cur === null || hasTextChildren(el)) return;
+                                if (cur === null || !el.getClientRects().length || hasTextChildren(el)) return;
                                 const t = (el.innerText || '').trim().replace(/\\s+/g, ' ');
                                 if (!t || t.length > 500 || /^[.\\u2026]+$/.test(t)) return;
                                 const prev = collected.get(cur) || [];
@@ -3220,32 +3236,15 @@ Text: "${textToTranslate}"`;
                         }
                         return { url: location.href, sections, profiles: extractedProfiles };
                     };
-                    const scrollAndExtract = (done) => {
-                        const sc = [...document.querySelectorAll('div,main,section')].filter(el => el.scrollHeight > el.clientHeight + 400 && el.clientHeight > 300).sort((a, b) => b.scrollHeight - a.scrollHeight)[0] || null;
-                        const scrollTo = (y) => { if (sc) sc.scrollTop = y; else window.scrollTo(0, y); };
-                        const maxY = () => (sc ? sc.scrollHeight : document.body.scrollHeight);
-                        let passes = 3;
-                        const runPass = () => {
-                            let y = 0;
-                            const step = () => {
-                                scrollTo(y);
-                                collectVisible();
-                                y += 800;
-                                if (y < maxY() + 1500) setTimeout(step, 320);
-                                else {
-                                    scrollTo(0);
-                                    setTimeout(() => { if (--passes > 0) runPass(); else { collectVisible(); done(buildResult()); } }, 1500);
-                                }
-                            };
-                            step();
-                        };
-                        runPass();
-                    };
                     let attempts = 0;
+                    let lastLen = -1;
                     const poll = setInterval(() => {
                         const isResultsPage = /\\/\\d{3}-\\d{3}-\\d{4}/.test(location.pathname);
                         const hasResults = [...document.querySelectorAll('a, button')].some(b => /view\\s*details/i.test(b.textContent || ''));
                         const bodyTxt = document.body.innerText || '';
+                        // A report is read once its text stops changing between polls.
+                        const settled = bodyTxt.length === lastLen;
+                        lastLen = bodyTxt.length;
                         const onSearchForm = !!document.querySelector('input[placeholder*="digit" i]');
                         const noResultsText = /(no results found|we couldn'?t find|didn'?t find any|0 results|no matches found|no records found|didn'?t return any)/i.test(bodyTxt);
                         const sectionHits = [...document.querySelectorAll('h1,h2,h3,h4,div,span')].filter(h => {
@@ -3255,19 +3254,20 @@ Text: "${textToTranslate}"`;
                         if (noResultsText && !hasResults) {
                             clearInterval(poll);
                             resolve({ none: true });
-                        } else if (onSearchForm && !isResultsPage && attempts > 12) {
+                        } else if (onSearchForm && !isResultsPage && attempts > 24) {
                             clearInterval(poll);
                             resolve({ none: true });
-                        } else if (bodyTxt.length > 4000 && !onSearchForm && ![...document.querySelectorAll('button')].some(b => /search\\s*now/i.test(b.textContent || '')) && ((hasResults && isResultsPage) || sectionHits >= 2 || attempts > 20)) {
+                        } else if (bodyTxt.length > 4000 && !onSearchForm && ![...document.querySelectorAll('button')].some(b => /search\\s*now/i.test(b.textContent || '')) && ((hasResults && isResultsPage) || ((sectionHits >= 2 || attempts > 40) && settled))) {
                             clearInterval(poll);
                             extractProfiles();
                             window.__phoneLookupExtracted = true;
-                            scrollAndExtract(resolve);
-                        } else if (++attempts > 90) {
+                            collectAll();
+                            resolve(buildResult());
+                        } else if (++attempts > 180) {
                             clearInterval(poll);
                             resolve(null);
                         }
-                    }, 500);
+                    }, 250);
                 })
             `;
             const profileScript = `
@@ -3310,29 +3310,29 @@ Text: "${textToTranslate}"`;
                                         btnIndex: fi
                                     };
                                 }).filter(p => p.name).filter((p, i, arr) => arr.findIndex(x => x.name === p.name && x.age === p.age) === i));
-                            }, 1500);
-                        } else if (++a > 40) { clearInterval(iv); resolve(null); }
-                    }, 500);
+                            }, 300);
+                        } else if (++a > 80) { clearInterval(iv); resolve(null); }
+                    }, 250);
                 })
             `;
             let injectAttempts = 0;
             let captured = false;
             let profilesData: any[] = [];
+            const applyProfiles = (d: any) => {
+                if (!d || !d.length || profilesData.length) return;
+                profilesData = d;
+                setPhoneLookupProfiles(d);
+                setIsPhoneSearching(false);
+                setPhoneLookupProgress(100);
+                if (formatted) {
+                    const best = d.find((p: any) => p.bestMatch);
+                    if (best) openPhoneLookupProfile(best);
+                }
+            };
             const injectPoll = setInterval(async () => {
                 injectAttempts++;
-                setPhoneLookupProgress(Math.min(95, Math.round((injectAttempts / 60) * 100)));
-                webview.executeJavaScript(profileScript).then((d: any) => {
-                    if (d && d.length) {
-                        profilesData = d;
-                        setPhoneLookupProfiles(d);
-                        setIsPhoneSearching(false);
-                        setPhoneLookupProgress(100);
-                        if (formatted) {
-                            const best = d.find((p: any) => p.bestMatch);
-                            if (best) openPhoneLookupProfile(best);
-                        }
-                    }
-                }).catch(() => { });
+                setPhoneLookupProgress(Math.min(95, Math.round((injectAttempts / 120) * 100)));
+                webview.executeJavaScript(profileScript).then(applyProfiles).catch(() => { });
                 try {
                     const data = await webview.executeJavaScript(injectScript);
                     if (data && data.none) {
@@ -3342,6 +3342,7 @@ Text: "${textToTranslate}"`;
                         if (!profilesData.length) setPhoneLookupFailed(true);
                     } else if (data && data.sections) {
                         const isResultsUrl = /spokeo\.com\/\d{3}-\d{3}-\d{4}/.test(data.url || "");
+                        if (isResultsUrl && formatted) applyProfiles(data.profiles);
                         if (isResultsUrl && (profilesData.length > 0 || !formatted)) return;
                         captured = true;
                         clearInterval(injectPoll);
@@ -3356,7 +3357,7 @@ Text: "${textToTranslate}"`;
                         }
                     }
                 } catch { }
-                if (injectAttempts > 60 && !captured) {
+                if (injectAttempts > 120 && !captured) {
                     clearInterval(injectPoll);
                     setIsPhoneSearching(false);
                     if (!profilesData.length) setPhoneLookupFailed(true);
@@ -3365,7 +3366,7 @@ Text: "${textToTranslate}"`;
                         handleSendAssistantMessage(`On the current phone lookup profile page, ${instructions}. Never ask the user questions; decide and act on your own.`);
                     }
                 }
-            }, 1000);
+            }, 500);
         }
     };
     const runPhoneLookup = () => {
@@ -3499,7 +3500,7 @@ Text: "${textToTranslate}"`;
                             .filter((s) => !/data sources/i.test(s.heading) && !/court|criminal|family|relative/i.test(s.heading))
                             .map((s, idx) => ({
                                 heading: idx === 0 ? "Overview" : s.heading,
-                                lines: s.lines.map(decodePhoneLookupLine).filter((l): l is string => !!l)
+                                lines: decodePhoneLookupLines(s.lines)
                             }))
                             .filter((s) => s.lines.length > 0 && s.heading !== "Overview");
                         const isDataEntryHeading = (h: string) => /\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/.test(h) || /@/.test(h) || /\d+\s+[A-Za-z0-9. ]+\b(st|ave|avenue|rd|road|dr|drive|ln|lane|blvd|ct|court|way|pl|place|cir|circle|hwy|trl|ter|terrace|pkwy)\b/i.test(h);
@@ -3528,10 +3529,9 @@ Text: "${textToTranslate}"`;
                         }
                         return sections.map((section, i) => {
                             const Icon = iconFor(section.heading);
-                            const isEntry = (l: string) => /\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/.test(l) || /@/.test(l) || /\d+\s+[A-Za-z0-9. ]+\b(st|ave|avenue|rd|road|dr|drive|ln|lane|blvd|ct|court|way|pl|place|cir|circle|hwy|trl|ter|terrace|pkwy)\b/i.test(l);
                             const entries: string[][] = [];
                             section.lines.forEach((l) => {
-                                if (isEntry(l) || entries.length === 0) entries.push([l]);
+                                if (isPhoneLookupEntry(l) || entries.length === 0) entries.push([l]);
                                 else entries[entries.length - 1].push(l);
                             });
                             return (
